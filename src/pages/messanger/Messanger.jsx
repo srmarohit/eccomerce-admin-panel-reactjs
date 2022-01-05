@@ -9,13 +9,17 @@ import "./messanger.css"
 
 // socket io implemetation
 import {io} from "socket.io-client" ;
+import { ContextProvider } from '../video-chat/Context';
+import App from '../video-chat/App';
 
 function Messanger() {
-
-    const [conversations, setConversations] = useState([]);
     const [currentChat, setCurrentChat] = useState(null);
+    const [receiverChatName, setReceiverChatName] = useState(null);
+    const [enableVideoChat, setEnableVideoChat] = useState(false);
+
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState("");
+    const [onlineUsers, setOnlineUsers] = useState([]);
 
     // set all users coordinators
     const [coordinators, setCoordinators] = useState([]);
@@ -68,24 +72,12 @@ function Messanger() {
     useEffect(()=>{
         socket.current.emit("addUser", user._id);
         socket.current.on("getUsers", users => {
-            console.log(users);
+            console.log("all online users ");
+            console.log(users)
              // todo display online active users
+            setOnlineUsers(users);
         });
     },[user]);
-
-    useEffect(() => {
-        const getConversation = async ()=>{
-            try{
-                const res = await axios.get("/messanger/conversation/"+user._id);
-                console.log( res.data);
-                setConversations(res.data)
-            }catch(err){
-                console.log(err)
-            }
-        }
-
-        getConversation();
-    }, [user._id]);
 
     useEffect(()=>{
         const getMessages = async () =>{
@@ -128,26 +120,55 @@ function Messanger() {
         }
     }
 
+    //start conversation 
+    const startConversation = async ({_id : receiverId, username}) => {
+        // check conversation exists or not
+        try{
+                const res = await axios.get(`/messanger/conversation/find/${user._id}/${receiverId}`);
+            if(res.data){
+                setCurrentChat(res.data);
+                setReceiverChatName(username);
+            }else{
+                const res = await axios.post("/messanger/conversation", { senderId : user._id, receiverId});
+                setCurrentChat(res.data)
+            }
+        }catch(err){
+            console.log("error to start chat " + err)
+        }
+    }
+
     useEffect(()=>{
         scrollRef.current?.scrollIntoView({ behavior: "smooth" });
     },[messages])
 
     return (
         <div className="messanger">
-            <div className="chatMenu">
-                <div className="chatMenuWrapper">
-                       <input placeholder="Search for friends" className="chatMenuInput" />
-                           { conversations.map(c => <div className={currentChat && currentChat._id === c._id && "active-chat"} onClick={()=> setCurrentChat(c)}> 
-                               <Conversation key={c._id} conv={c} user={user}/>
-                               </div>
-                               )}
-                </div>
-            </div>
             <div className="chatBox">
+                    <div className="chat-info">
+                {
+                    currentChat ?
+                    <>
+                    <div className="receiver-name">
+                        <img src="https://bit.ly/srmarohit"/>
+                        <h4>{receiverChatName}</h4>
+                    </div>
+                    <button onClick={()=>setEnableVideoChat(!enableVideoChat)}>{enableVideoChat ? "End Video" : "Start Video"}</button>
+                    </>
+                    : 
+                    null
+                }
+                </div>                 
+                {
+                 enableVideoChat && <div className="video-chat-wrapper">
+                    <ContextProvider>
+                        <App/>
+                    </ContextProvider>
+                </div>
+                }
                 <div className="chatBoxWrapper">
-                   {
-                       currentChat ?
-                       <>
+                {
+               currentChat ?
+                <>   
                        <div className="chatBoxTop">
                     {
                         messages.map(m => (
@@ -177,7 +198,14 @@ function Messanger() {
             <div className="chatOnline">
                 <div className="chatOnlineWrapper">
                     {
-                        coordinators?.map(coord => <ChatOnline co={coord}  />)
+                        coordinators?.map(coord => (
+                            <div
+                             key={coord._id} 
+                             onClick={ () => startConversation(coord)}
+                             >
+                                <ChatOnline co={coord}  online = { onlineUsers.find(ou => ou.userId === coord._id) ? true : false} /> 
+                            </div>
+                        ))
                     }
                 </div>
             </div>

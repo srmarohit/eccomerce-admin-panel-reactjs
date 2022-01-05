@@ -1,6 +1,7 @@
 import React from 'react'
 import "./chatonline.css"
-function ChatOnline({co}) {
+function ChatOnline({co , online}) {
+  console.log("online" + online)
     return (
         <div className="chatOnline">
           <div className="chatOnlineFriend">
@@ -10,7 +11,7 @@ function ChatOnline({co}) {
                 src="https://bit.ly/srmarohit"
                 alt=""
               />
-              <div className="chatOnlineBadge"></div>
+              <div className={online ? "chatOnlineBadge" : ""}></div>
             </div>
             <span className="chatOnlineName">{co.username}</span>
           </div>
