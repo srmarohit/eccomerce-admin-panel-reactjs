@@ -1,28 +1,22 @@
-import { useContext, useRef } from "react";
+import { useContext, useRef, useState } from "react";
 import "./auth.css";
 
-import { loginCall } from "../../apiCalls";
+import { loginCall } from "../../redux/apiCalls";
 
 import { CircularProgress } from "@material-ui/core";
-import { AuthContext } from "../../context/AuthContext";
 import {useNavigate } from "react-router-dom" ;
+import { useDispatch } from "react-redux";
 
 export default function Login() {
-  const email = useRef();
-  const password = useRef();
-  const {isFetching, dispatch} = useContext(AuthContext);
+  const [email,setEmail] = useState("");
+  const [password,setPassword] = useState("");
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const handleClick = (e) => {
     e.preventDefault();
-    console.log(email.current.value)
-    loginCall(
-        {
-            email : email.current.value,
-            password : password.current.value
-        },
-        dispatch
-    );
+    console.log(email)
+    loginCall(dispatch, {email, password});
     
     navigate("./", {replace:true})
   };
@@ -41,23 +35,21 @@ export default function Login() {
             <input
               placeholder="Email"
               type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
               required
               className="loginInput"
-              ref={email}
             />
             <input
               placeholder="Password"
               type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
               required
               className="loginInput"
-              ref={password}
             />
-            <button className="loginButton" type="submit" disable={isFetching ? true : false}>
-            {isFetching ? (
-                <CircularProgress color="white" size="20px" />
-              ) : (
+            <button className="loginButton" type="submit" >
                 "Log In"
-              )}
             </button>
             <span className="loginForgot">Forgot Password?</span>
           </form>

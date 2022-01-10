@@ -1,18 +1,16 @@
 
-import React, {useState, useEffect, useContext, useRef} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import ChatOnline from '../../components/chatOnline/ChatOnline';
-import Conversation from '../../components/conversation/Conversation';
 import Message from '../../components/message/Message';
-import {AuthContext} from '../../context/AuthContext' ;
-import axios from 'axios';
 import "./messanger.css"
 
 // socket io implemetation
 import {io} from "socket.io-client" ;
 import { ContextProvider } from '../video-chat/Context';
 import App from '../video-chat/App';
+import { pubRequest } from '../../request_methods';
 
-function Messanger() {
+function Messanger({user}) {
     const [currentChat, setCurrentChat] = useState(null);
     const [receiverChatName, setReceiverChatName] = useState(null);
     const [enableVideoChat, setEnableVideoChat] = useState(false);
@@ -31,11 +29,10 @@ function Messanger() {
 
     const scrollRef = useRef();
 
-    const {user} = useContext(AuthContext);
+    socket.current = io("ws://localhost:5001");
 
     // socket io connection 
     useEffect(()=>{
-        socket.current = io("ws://localhost:5001");
         socket.current.on("getMessage", ({senderId,text}) => {
             setArrivalMessage({
                 sender : senderId,
@@ -43,14 +40,30 @@ function Messanger() {
                 createdAt : Date.now()
             });
         });
-    },[socket.current]);
+    },[]);
+
+    
+    // add or get user info 
+    useEffect(()=>{
+        socket.current.emit("addUser", user._id);
+        socket.current.on("getUsers", users => {
+            console.log("all online users ");
+            //console.log(users)
+             // todo display online active users
+            setOnlineUsers(users); 
+        });
+
+        return () => {
+            socket.current = null;
+        }
+    },[user._id]);
 
     // set All users 
     useEffect(()=>{
         const fetchCoordinator = async () =>{
             try{
-                const res = await axios.get("/user/coordinators");
-                console.log(res.data);
+                const res = await pubRequest.get("/user/coordinators");
+                //console.log(res.data);
                 res.data = res.data.filter(data => data._id !== user._id);
                 setCoordinators(res.data);
             }catch(err){
@@ -68,22 +81,12 @@ function Messanger() {
         setMessages(prev => [...prev, arrivalMessage])
     },[arrivalMessage, currentChat]);
 
-    // add or get user info 
-    useEffect(()=>{
-        socket.current.emit("addUser", user._id);
-        socket.current.on("getUsers", users => {
-            console.log("all online users ");
-            console.log(users)
-             // todo display online active users
-            setOnlineUsers(users);
-        });
-    },[user]);
 
     useEffect(()=>{
         const getMessages = async () =>{
             try{
-                const res = await axios.get("/messanger/message/"+currentChat?._id);
-                console.log(res.data);
+                const res = await pubRequest.get("/messanger/message/"+currentChat?._id);
+                //console.log(res.data);
                 setMessages(res.data);
             }catch(err){
                 console.log(err)
@@ -111,9 +114,9 @@ function Messanger() {
         });
         
         try{
-            const res = await axios.post("/messanger/message", newText);
+            const res = await pubRequest.post("/messanger/message", newText);
             setMessages([...messages, res.data])
-            console.log(res.data);
+            //console.log(res.data);
             setNewMessage("");
         }catch(err){
             console.log(err)
@@ -122,15 +125,17 @@ function Messanger() {
 
     //start conversation 
     const startConversation = async ({_id : receiverId, username}) => {
+        //console.log("click on start conversation")
         // check conversation exists or not
         try{
-                const res = await axios.get(`/messanger/conversation/find/${user._id}/${receiverId}`);
+                const res = await pubRequest.get(`/messanger/conversation/find/${user._id}/${receiverId}`);
             if(res.data){
                 setCurrentChat(res.data);
                 setReceiverChatName(username);
             }else{
-                const res = await axios.post("/messanger/conversation", { senderId : user._id, receiverId});
-                setCurrentChat(res.data)
+                const res = await pubRequest.post("/messanger/conversation", { senderId : user._id, receiverId});
+                setCurrentChat(res.data);
+                setReceiverChatName(username);
             }
         }catch(err){
             console.log("error to start chat " + err)
@@ -152,16 +157,18 @@ function Messanger() {
                         <img src="https://bit.ly/srmarohit"/>
                         <h4>{receiverChatName}</h4>
                     </div>
-                    <button onClick={()=>setEnableVideoChat(!enableVideoChat)}>{enableVideoChat ? "End Video" : "Start Video"}</button>
+                    <button 
+                    className={!enableVideoChat ? "start-video" : "end-video"}
+                    onClick={()=>setEnableVideoChat(!enableVideoChat)}>{enableVideoChat ? "End Video" : "Start Video"}</button>
                     </>
                     : 
                     null
                 }
                 </div>                 
                 {
-                 enableVideoChat && <div className="video-chat-wrapper">
+                   enableVideoChat && <div className="video-chat-wrapper">
                     <ContextProvider>
-                        <App/>
+                     <App/>  
                     </ContextProvider>
                 </div>
                 }
@@ -172,7 +179,7 @@ function Messanger() {
                        <div className="chatBoxTop">
                     {
                         messages.map(m => (
-                            <div ref={scrollRef}>
+                            <div ref={scrollRef} key={m._id}>
                                 <Message message={m} own={m.sender === user._id} />
                             </div>
                         ))

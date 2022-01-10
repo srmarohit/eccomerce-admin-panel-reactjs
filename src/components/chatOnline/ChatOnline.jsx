@@ -1,5 +1,7 @@
 import React from 'react'
 import "./chatonline.css"
+
+
 function ChatOnline({co , online}) {
   console.log("online" + online)
     return (
@@ -19,4 +21,4 @@ function ChatOnline({co , online}) {
     )
 }
 
-export default ChatOnline
+export default React.memo(ChatOnline) 

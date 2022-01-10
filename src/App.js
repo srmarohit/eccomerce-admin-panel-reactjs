@@ -3,16 +3,17 @@ import Topbar from "./components/topbar/Topbar";
 import "./App.css"
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Home from "./pages/home/Home";
+import ProductList from "./pages/product-list/ProductList";
 import UsersList from "./pages/users-list/UsersList";
+
 import EditUser from "./pages/edit-user/EditUser";
 import Messanger from "./pages/messanger/Messanger";
 import Login from "./pages/auth/Auth";
-import { AuthContext } from "./context/AuthContext";
-import { useContext } from "react";
+import { useSelector } from "react-redux";
 
 export default function App(){
-     const {user} = useContext(AuthContext);
-    return (
+   const user = useSelector((state) => state.user.currentUser);  
+     return (
         <Router>
            {
                !user 
@@ -24,10 +25,11 @@ export default function App(){
                <div className="container">
                <Sidebar/>
                <Routes>
-               <Route exact path="/" element={<Home />} />
-               <Route path="/users" element={<UsersList />} />
-               <Route path="/user/:id" element={<EditUser />} />
-               <Route path="/messanger" element={<Messanger />} />
+               <Route exact path="/" element={<Home user={user} />} />
+               <Route path="/users" element={<UsersList user={user} />} />
+               <Route path="/products" element={<ProductList user={user} />} />
+               <Route path="/user/:id" element={<EditUser user={user} />} />
+               <Route path="/messanger" element={<Messanger user={user} />} />
                </Routes>
               </div>
               </>
