@@ -29,10 +29,11 @@ function Messanger({user}) {
 
     const scrollRef = useRef();
 
-    socket.current = io("ws://localhost:5001");
+    //socket.current = io("ws://localhost:5001");
 
     // socket io connection 
     useEffect(()=>{
+        socket.current = io("https://mera-shop-api.herokuapp.com");
         socket.current.on("getMessage", ({senderId,text}) => {
             setArrivalMessage({
                 sender : senderId,
